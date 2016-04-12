@@ -11,24 +11,28 @@ import (
 )
 
 
-type Vertex struct{
-	X, Y int
-	index int
-	DjDist int
-	Visited bool
-}
-type PriorityQueue Q []*Vertex
-var dist map[Vertex]int
-var prev map[Vertex]int
-var Rx, Ry int
+var allDirt []*Vertex
+var prev map[*Vertex]*Vertex
+var dist map[*Vertex]int
+var Rx, Ry, Dx, Dy int
 var source Vertex
 
 
-func (pq PriorityQueue) []*Vertex Len() int { return len(pq) }
+type Vertex struct{
+	X, Y int
+	index int
+	Weight int
+	Visited bool
+}
+
+type PriorityQueue []*Vertex
+
+var pq PriorityQueue 
+
+func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
-	//maybe needs to be <
-	return pq[i].DjDist > pq[j].DjDist
+	return pq[i].Weight < pq[j].Weight
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -43,7 +47,7 @@ func (pq *PriorityQueue) Push(x interface{}) {
 		n := len(*pq)
 		vert := x.(*Vertex)
 		vert.index = n
-		*pq = append(*pq, item)
+		*pq = append(*pq, vert)
 }
 
 func (pq *PriorityQueue) Pop() interface{} {
@@ -56,8 +60,8 @@ func (pq *PriorityQueue) Pop() interface{} {
 		return v
 }
 
-func (pa *PriorityQueue) update(v *Vertex, value string, weight int) {
-	v.weight = weight
+func (pq *PriorityQueue) update(v *Vertex, weight int) {
+	v.Weight = weight
 	heap.Fix(pq, v.index)
 }
 
@@ -76,10 +80,11 @@ func main() {
 		fmt.Println("you're file format sucks", err);
 		return
 	}
-	dist = make(map[Vertex]int)
-	prev = make(map[Vertex]int)
-
+	dist = make(map[*Vertex]int)
+	prev = make(map[*Vertex]*Vertex)
 	var s []string
+	pq = make(PriorityQueue, len(lines))
+	in := 0
 	for i, l := range lines {
 
 		s = strings.Split(l, " ")
@@ -94,21 +99,66 @@ func main() {
 
 		//Room Dimensions
 		if i == 0 {
-			Rx = x;
-			Ry = y;
+			Dx = x;
+			Dy = y;
 			continue
 		} else if  i == 1 {
-			source = Vertex{X; x, Y: y, Dist: 0, DjDist: 0, Visisted: true}
-			continue
+			Rx = x;
+			Ry = y;
+			source = Vertex{X: x, Y: y, Weight: 0, Visited: true}
 		}
 
 
-		v := Vertex{X: x, Y: y, Dist: (x + y), DjDist: math.MaxInt32, Visited: false}
-
-		dist[v] = math.MaxInt32
-		prev[v] = -1
-		Q = append(Q, v)
+		v := Vertex{X: x, Y: y, Weight: math.MaxInt32, Visited: false}
+		allDirt = append(allDirt, &v)
+		pq[in] = &v
+		in++
+		dist[&v] = math.MaxInt32
+		prev[&v] = nil
 	}
+
+	pq[in] = &source
+	in++
+	heap.Init(&pq)
+
+	FindPath()
+
+	fmt.Println(dist)
+	fmt.Println(prev)
+
+}
+
+
+func FindPath(){
+
+	for pq.Len() > 0 {
+
+		u := heap.Pop(&pq);
+		u = u.(*Vertex)
+
+		for _, v := range allDirt {
+
+			if v == u {
+				continue
+			}
+
+			alt := dist[u.(*Vertex)] + GetDist(u.(*Vertex), v)
+			if alt < dist[v] {
+				dist[v] = alt
+				prev[v] = u.(*Vertex)
+				pq.update(v, alt)
+			}
+
+		}
+
+
+	}
+}
+
+func GetDist(u, v *Vertex) int {
+
+	ret := int(math.Abs(float64((u.X - v.X)) + float64((u.Y - v.Y))))
+	return ret
 }
 
 
